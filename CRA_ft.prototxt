@@ -1,0 +1,947 @@
+# Enter your network definition here.
+# Use Shift+Enter to update the visualization.
+
+name: "LeNet"
+
+layer {
+  type: 'DummyData'
+  name: 'random'
+  top: 'rand'
+  dummy_data_param {
+    shape: { dim: 256 dim: 5 dim:1 dim: 1}
+    data_filler: { type: 'uniform' }
+  }
+}
+
+layer {
+  type: 'Threshold'
+  name: 'threshold'
+  bottom: 'rand'
+  top: 'modalMask'
+  threshold_param {
+    threshold: 0.3
+  }
+}
+
+layer {
+  name: "slices"
+  type: "Slice"
+  bottom: "modalMask"
+  top: "modal1mask"
+  top: "modal2mask"
+  top: "modal3mask"
+  top: "modal4mask"
+  top: "modal5mask"
+
+  slice_param {
+      slice_dim: 1
+      slice_point: 1
+      slice_point: 2
+      slice_point: 3
+      slice_point: 4
+  }
+}
+
+layer {
+  name: "repeatModal1Mask"
+  type: "Tile"
+  bottom: "modal1mask"
+  top: "modal1PartialMask"
+  tile_param { tiles: 32 axis: 2 }
+}
+
+layer {
+  name: "repeatModal1Mask2"
+  type: "Tile"
+  bottom: "modal1PartialMask"
+  top: "modal1FullMask"
+  tile_param { tiles: 32 axis: 3 }
+}
+
+layer {
+  name: "repeatModal2Mask"
+  type: "Tile"
+  bottom: "modal2mask"
+  top: "modal2PartialMask"
+  tile_param { tiles: 32 axis: 2 }
+}
+
+layer {
+  name: "repeatModal2Mask2"
+  type: "Tile"
+  bottom: "modal2PartialMask"
+  top: "modal2FullMask"
+  tile_param { tiles: 32 axis: 3 }
+}
+
+layer {
+  name: "repeatModal3Mask"
+  type: "Tile"
+  bottom: "modal3mask"
+  top: "modal3PartialMask"
+  tile_param { tiles: 32 axis: 2 }
+}
+
+layer {
+  name: "repeatModal3Mask2"
+  type: "Tile"
+  bottom: "modal3PartialMask"
+  top: "modal3FullMask"
+  tile_param { tiles: 32 axis: 3 }
+}
+
+layer {
+  name: "repeatModal4Mask"
+  type: "Tile"
+  bottom: "modal4mask"
+  top: "modal4PartialMask"
+  tile_param { tiles: 32 axis: 2 }
+}
+
+layer {
+  name: "repeatModal4Mask2"
+  type: "Tile"
+  bottom: "modal4PartialMask"
+  top: "modal4FullMask"
+  tile_param { tiles: 32 axis: 3 }
+}
+
+layer {
+  name: "repeatModal5Mask"
+  type: "Tile"
+  bottom: "modal5mask"
+  top: "modal5PartialMask"
+  tile_param { tiles: 32 axis: 2 }
+}
+
+layer {
+  name: "repeatModal5Mask2"
+  type: "Tile"
+  bottom: "modal5PartialMask"
+  top: "modal5FullMask"
+  tile_param { tiles: 32 axis: 3 }
+}
+
+layer {
+  name: "concateAllMask"
+  type: "Concat"
+  bottom: "modal1FullMask"
+  bottom: "modal2FullMask"
+  bottom: "modal3FullMask"
+  bottom: "modal4FullMask"
+  bottom: "modal5FullMask"
+  top: "fullMask"
+  concat_param {
+    axis: 2
+  }
+}
+
+layer {
+  name: "input"
+  type: "HDF5Data"
+  top: "modal1"
+  top: "modal2"
+  top: "modal3"
+  top: "modal4"
+  top: "modal5"
+  #top: "label"
+  include {
+    phase: TRAIN
+  }
+  hdf5_data_param {
+    source: "./cra/mtpie_CRA_CNN_train.txt"
+    batch_size: 256
+  }
+}
+
+layer {
+  name: "input"
+  type: "HDF5Data"
+  top: "modal1"
+  top: "modal2"
+  top: "modal3"
+  top: "modal4"
+  top: "modal5"
+  #top: "label"
+  include {
+    phase: TEST
+  }
+  hdf5_data_param {
+    source: "./cra/mtpie_CRA_CNN_test.txt"
+    batch_size: 256
+  }
+}
+
+layer {
+  name: "concateAllData"
+  type: "Concat"
+  bottom: "modal1"
+  bottom: "modal2"
+  bottom: "modal3"
+  bottom: "modal4"
+  bottom: "modal5"
+  top: "data"
+  concat_param {
+    axis: 2
+  }
+}
+
+
+layer {
+  name: "maskingData"
+  type: "Eltwise"
+  bottom: "fullMask"
+  bottom: "data"
+  top: "ra1_input"
+  eltwise_param{
+    operation: PROD
+  }
+}
+
+#--------------------------
+# ra1
+
+layer {
+  name: "ra1_conv1"
+  type: "Convolution"
+  bottom: "ra1_input"
+  top: "ra1_conv1"
+  param {
+    lr_mult: 1
+  }
+  param {
+    lr_mult: 0.1
+  }
+  convolution_param {
+    num_output: 16
+    kernel_size: 5
+    stride: 2
+    pad: 2
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "constant"
+    }
+  }
+}
+
+layer {
+  name: "ra1_conv1_relu"
+  type: "ReLU"
+  bottom: "ra1_conv1"
+  top: "ra1_conv1"
+}
+
+
+
+layer {
+  name: "ra1_conv2"
+  type: "Convolution"
+  bottom: "ra1_conv1"
+  top: "ra1_conv2"
+  param {
+    lr_mult: 1
+  }
+  param {
+    lr_mult: 0.1
+  }
+  convolution_param {
+    num_output: 8
+    kernel_size: 3
+    stride: 2
+    pad: 1
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "constant"
+    }
+  }
+}
+
+layer {
+  name: "ra1_conv2_relu"
+  type: "ReLU"
+  bottom: "ra1_conv2"
+  top: "ra1_conv2"
+}
+
+
+layer {
+  name: "ra1_ip1"
+  type: "InnerProduct"
+  bottom: "ra1_conv2"
+  top: "ra1_ip1"
+  param {
+    lr_mult: 1
+  }
+  param {
+    lr_mult: 0.1
+  }
+  inner_product_param {
+    num_output: 2056
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "constant"
+    }
+  }  
+}
+
+layer {
+  name: "ra1_ip1_relu"
+  type: "ReLU"
+  bottom: "ra1_ip1"
+  top: "ra1_ip1"
+}
+
+layer {
+  name: "ra1_drop1"
+  type: "Dropout"
+  bottom: "ra1_ip1"
+  top: "ra1_ip1"
+  dropout_param {
+    dropout_ratio: 0.5
+  }
+}
+
+layer {
+  name: "ra1_ip2"
+  type: "InnerProduct"
+  bottom: "ra1_ip1"
+  top: "ra1_ip2"
+  param {
+    lr_mult: 1
+  }
+  param {
+    lr_mult: 0.1
+  }
+  inner_product_param {
+    num_output: 2560
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "constant"
+    }
+  }  
+}
+
+layer {
+  name: "ra1_ip2_relu"
+  type: "ReLU"
+  bottom: "ra1_ip2"
+  top: "ra1_ip2"
+}
+
+
+
+layer {
+  name: "ra1_ip2_reshape"
+  type: "Reshape"
+  bottom: "ra1_ip2"
+  top: "ra1_ip2_reshape"
+  reshape_param {
+      shape {
+        dim: 0  # copy the dimension from below
+        dim: 8
+        dim: 40
+        dim: 8
+      }
+    }
+}
+
+layer {
+  name: "ra1_deconv2"
+  type: "Deconvolution"
+  bottom: "ra1_ip2_reshape"
+  top: "ra1_deconv2"
+  param {
+    lr_mult: 1
+  }
+  param {
+    lr_mult: 0.1
+  }
+  convolution_param {
+    num_output: 16
+    kernel_size: 5
+    stride: 2
+    pad: 1
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "constant"
+    }
+  }
+}
+
+layer {
+  name: "ra1_deconv2_relu"
+  type: "ReLU"
+  bottom: "ra1_deconv2"
+  top: "ra1_deconv2"
+}
+
+
+layer {
+  name: "ra1_deconv1"
+  type: "Deconvolution"
+  bottom: "ra1_deconv2"
+  top: "ra1_deconv1"
+  param {
+    lr_mult: 1
+  }
+  param {
+    lr_mult: 0.1
+  }
+  convolution_param {
+    num_output: 1
+    kernel_size: 5
+    stride: 2
+    pad: 1
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "constant"
+    }
+  }
+}
+
+layer {
+  name: "ra1_deconv1_crop"
+  type: "Crop"
+  bottom: "ra1_deconv1"
+  bottom: "ra1_input"
+  top: "ra1_deconv1_crop"
+  crop_param{
+    axis: 2
+    offset: 1
+  }
+}
+
+layer {
+  name: "ra1_sum"
+  type: "Eltwise"
+  bottom: "ra1_deconv1_crop"
+  bottom: "ra1_input"
+  top: "ra2_input"
+  eltwise_param{
+    operation: SUM
+  }
+}
+
+#--------------------------
+# ra2
+
+layer {
+  name: "ra2_conv1"
+  type: "Convolution"
+  bottom: "ra2_input"
+  top: "ra2_conv1"
+  param {
+    lr_mult: 1
+  }
+  param {
+    lr_mult: 0.1
+  }
+  convolution_param {
+    num_output: 16
+    kernel_size: 5
+    stride: 2
+    pad: 2
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "constant"
+    }
+  }
+}
+
+layer {
+  name: "ra2_conv1_relu"
+  type: "ReLU"
+  bottom: "ra2_conv1"
+  top: "ra2_conv1"
+}
+
+
+
+layer {
+  name: "ra2_conv2"
+  type: "Convolution"
+  bottom: "ra2_conv1"
+  top: "ra2_conv2"
+  param {
+    lr_mult: 1
+  }
+  param {
+    lr_mult: 0.1
+  }
+  convolution_param {
+    num_output: 8
+    kernel_size: 3
+    stride: 2
+    pad: 1
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "constant"
+    }
+  }
+}
+
+layer {
+  name: "ra2_conv2_relu"
+  type: "ReLU"
+  bottom: "ra2_conv2"
+  top: "ra2_conv2"
+}
+
+
+layer {
+  name: "ra2_ip1"
+  type: "InnerProduct"
+  bottom: "ra2_conv2"
+  top: "ra2_ip1"
+  param {
+    lr_mult: 1
+  }
+  param {
+    lr_mult: 0.1
+  }
+  inner_product_param {
+    num_output: 2056
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "constant"
+    }
+  }  
+}
+
+layer {
+  name: "ra2_ip1_relu"
+  type: "ReLU"
+  bottom: "ra2_ip1"
+  top: "ra2_ip1"
+}
+
+layer {
+  name: "ra2_drop1"
+  type: "Dropout"
+  bottom: "ra2_ip1"
+  top: "ra2_ip1"
+  dropout_param {
+    dropout_ratio: 0.5
+  }
+}
+
+layer {
+  name: "ra2_ip2"
+  type: "InnerProduct"
+  bottom: "ra2_ip1"
+  top: "ra2_ip2"
+  param {
+    lr_mult: 1
+  }
+  param {
+    lr_mult: 0.1
+  }
+  inner_product_param {
+    num_output: 2560
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "constant"
+    }
+  }  
+}
+
+layer {
+  name: "ra2_ip2_relu"
+  type: "ReLU"
+  bottom: "ra2_ip2"
+  top: "ra2_ip2"
+}
+
+
+
+layer {
+  name: "ra2_ip2_reshape"
+  type: "Reshape"
+  bottom: "ra2_ip2"
+  top: "ra2_ip2_reshape"
+  reshape_param {
+      shape {
+        dim: 0  # copy the dimension from below
+        dim: 8
+        dim: 40
+        dim: 8
+      }
+    }
+}
+
+
+
+
+
+
+
+
+
+layer {
+  name: "ra2_deconv2"
+  type: "Deconvolution"
+  bottom: "ra2_ip2_reshape"
+  top: "ra2_deconv2"
+  param {
+    lr_mult: 1
+  }
+  param {
+    lr_mult: 0.1
+  }
+  convolution_param {
+    num_output: 16
+    kernel_size: 5
+    stride: 2
+    pad: 1
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "constant"
+    }
+  }
+}
+
+layer {
+  name: "ra2_deconv2_relu"
+  type: "ReLU"
+  bottom: "ra2_deconv2"
+  top: "ra2_deconv2"
+}
+
+
+layer {
+  name: "ra2_deconv1"
+  type: "Deconvolution"
+  bottom: "ra2_deconv2"
+  top: "ra2_deconv1"
+  param {
+    lr_mult: 1
+  }
+  param {
+    lr_mult: 0.1
+  }
+  convolution_param {
+    num_output: 1
+    kernel_size: 5
+    stride: 2
+    pad: 1
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "constant"
+    }
+  }
+}
+
+layer {
+  name: "ra2_deconv1_crop"
+  type: "Crop"
+  bottom: "ra2_deconv1"
+  bottom: "ra2_input"
+  top: "ra2_deconv1_crop"
+  crop_param{
+    axis: 2
+    offset: 1
+  }
+}
+
+layer {
+  name: "ra2_sum"
+  type: "Eltwise"
+  bottom: "ra2_deconv1_crop"
+  bottom: "ra2_input"
+  top: "ra3_input"
+  eltwise_param{
+    operation: SUM
+  }
+}
+
+#--------------------------
+# ra3
+
+layer {
+  name: "ra3_conv1"
+  type: "Convolution"
+  bottom: "ra3_input"
+  top: "ra3_conv1"
+  param {
+    lr_mult: 1
+  }
+  param {
+    lr_mult: 0.1
+  }
+  convolution_param {
+    num_output: 16
+    kernel_size: 5
+    stride: 2
+    pad: 2
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "constant"
+    }
+  }
+}
+
+layer {
+  name: "ra3_conv1_relu"
+  type: "ReLU"
+  bottom: "ra3_conv1"
+  top: "ra3_conv1"
+}
+
+
+
+layer {
+  name: "ra3_conv2"
+  type: "Convolution"
+  bottom: "ra3_conv1"
+  top: "ra3_conv2"
+  param {
+    lr_mult: 1
+  }
+  param {
+    lr_mult: 0.1
+  }
+  convolution_param {
+    num_output: 8
+    kernel_size: 3
+    stride: 2
+    pad: 1
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "constant"
+    }
+  }
+}
+
+layer {
+  name: "ra3_conv2_relu"
+  type: "ReLU"
+  bottom: "ra3_conv2"
+  top: "ra3_conv2"
+}
+
+
+layer {
+  name: "ra3_ip1"
+  type: "InnerProduct"
+  bottom: "ra3_conv2"
+  top: "ra3_ip1"
+  param {
+    lr_mult: 1
+  }
+  param {
+    lr_mult: 0.1
+  }
+  inner_product_param {
+    num_output: 2056
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "constant"
+    }
+  }  
+}
+
+layer {
+  name: "ra3_ip1_relu"
+  type: "ReLU"
+  bottom: "ra3_ip1"
+  top: "ra3_ip1"
+}
+
+layer {
+  name: "ra3_drop1"
+  type: "Dropout"
+  bottom: "ra3_ip1"
+  top: "ra3_ip1"
+  dropout_param {
+    dropout_ratio: 0.5
+  }
+}
+
+layer {
+  name: "ra3_ip2"
+  type: "InnerProduct"
+  bottom: "ra3_ip1"
+  top: "ra3_ip2"
+  param {
+    lr_mult: 1
+  }
+  param {
+    lr_mult: 0.1
+  }
+  inner_product_param {
+    num_output: 2560
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "constant"
+    }
+  }  
+}
+
+layer {
+  name: "ra3_ip2_relu"
+  type: "ReLU"
+  bottom: "ra3_ip2"
+  top: "ra3_ip2"
+}
+
+
+
+layer {
+  name: "ra3_ip2_reshape"
+  type: "Reshape"
+  bottom: "ra3_ip2"
+  top: "ra3_ip2_reshape"
+  reshape_param {
+      shape {
+        dim: 0  # copy the dimension from below
+        dim: 8
+        dim: 40
+        dim: 8
+      }
+    }
+}
+
+
+layer {
+  name: "ra3_deconv2"
+  type: "Deconvolution"
+  bottom: "ra3_ip2_reshape"
+  top: "ra3_deconv2"
+  param {
+    lr_mult: 1
+  }
+  param {
+    lr_mult: 0.1
+  }
+  convolution_param {
+    num_output: 16
+    kernel_size: 5
+    stride: 2
+    pad: 1
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "constant"
+    }
+  }
+}
+
+layer {
+  name: "ra3_deconv2_relu"
+  type: "ReLU"
+  bottom: "ra3_deconv2"
+  top: "ra3_deconv2"
+}
+
+
+layer {
+  name: "ra3_deconv1"
+  type: "Deconvolution"
+  bottom: "ra3_deconv2"
+  top: "ra3_deconv1"
+  param {
+    lr_mult: 1
+  }
+  param {
+    lr_mult: 0.1
+  }
+  convolution_param {
+    num_output: 1
+    kernel_size: 5
+    stride: 2
+    pad: 1
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "constant"
+    }
+  }
+}
+
+layer {
+  name: "ra3_deconv1_crop"
+  type: "Crop"
+  bottom: "ra3_deconv1"
+  bottom: "ra3_input"
+  top: "ra3_deconv1_crop"
+  crop_param{
+    axis: 2
+    offset: 1
+  }
+}
+
+layer {
+  name: "ra3_sum"
+  type: "Eltwise"
+  bottom: "ra3_deconv1_crop"
+  bottom: "ra3_input"
+  top: "output"
+  eltwise_param{
+    operation: SUM
+  }
+}
+
+
+
+
+layer {
+  name: "dataMask"
+  type: "Mask"
+  bottom: "data"
+  top: "dataMask"
+}
+
+layer {
+  name: "maskingResult"
+  type: "Eltwise"
+  bottom: "output"
+  bottom: "dataMask"
+  top: "maskedOuput"
+  eltwise_param{
+    operation: PROD
+  }
+}
+
+layer {
+  name: "ra2_loss"
+  type: "EuclideanLoss"
+  bottom: "maskedOuput"
+  bottom: "data"
+  top: "loss"
+}
+
+
